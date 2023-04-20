@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text-to-Speech</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>ChatGPT 3.5 vocalized</h1>
+    <form id="ttsForm">
+        <label for="prompt">Enter prompt:</label>
+        <textarea id="prompt" rows="5" cols="50"></textarea>
+        <br>
+        <label for="speaker">Choose a speaker:</label>
+        <select id="speaker">
+            <option value="LEONID">LEONID</option>
+            <option value="NOF">NOF</option>
+            <option value="SASHA">SASHA</option>
+        </select>
+        <br>
+        <button type="submit">Generate Speech</button>
+    </form>
+    <br>
+    <audio id="audioPlayer" controls></audio>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
