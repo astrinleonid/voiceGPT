@@ -21,7 +21,7 @@ URL = tokens['url']
 port = tokens['port']
 
 bot = Bot(token=telegram_token)
-bot.set_webhook(url=f'http://{URL}:{port}/{telegram_token}')
+await bot.set_webhook(url=f'http://{URL}:{port}/{telegram_token}')
 
 speakers = {'LEONID' : 'kingsson.wav', 'NOF' : 'Nof.wav', 'SASHA' : 'sasha.wav'}
 
@@ -65,7 +65,7 @@ def get_response():
     return send_file(output_file, mimetype='audio/wav', as_attachment=True)
 
 
-updater = Updater(token=telegram_token, use_context=True)
+updater = Updater(telegram_token, use_context=True)
 dispatcher = updater.dispatcher
 
 def handle_text(update, context):
