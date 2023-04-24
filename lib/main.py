@@ -17,6 +17,11 @@ with open('config.json') as token_file:
 openai.api_key = tokens['openai']
 telegram_token  = tokens['telegram']
 COQUI_STUDIO_TOKEN = tokens['coqui']
+URL = tokens['url']
+port = tokens['port']
+
+bot = Bot(token=telegram_token)
+bot.set_webhook(url=f'http://{URL}:{port}/{telegram_token}')
 
 speakers = {'LEONID' : 'kingsson.wav', 'NOF' : 'Nof.wav', 'SASHA' : 'sasha.wav'}
 
@@ -78,7 +83,7 @@ def handle_telegram_update():
     return 'ok'
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001)
+    app.run(host='0.0.0.0', port=port)
 
 
 
