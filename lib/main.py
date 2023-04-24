@@ -5,6 +5,7 @@ from flask import render_template
 import pickle
 import openai
 import json
+import asyncio
 import requests
 from flask import Response
 from telegram import Update, Bot
@@ -21,7 +22,12 @@ URL = tokens['url']
 port = tokens['port']
 
 bot = Bot(token=telegram_token)
-await bot.set_webhook(url=f'http://{URL}:{port}/{telegram_token}')
+
+async def set_telegram_webhook(bot, url):
+    await bot.set_webhook(url=url)
+
+asyncio.run(set_telegram_webhook(bot, f'http://{URL}:{port}/{telegram_token}'))
+
 
 speakers = {'LEONID' : 'kingsson.wav', 'NOF' : 'Nof.wav', 'SASHA' : 'sasha.wav'}
 
