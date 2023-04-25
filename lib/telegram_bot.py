@@ -32,7 +32,7 @@ bot = telebot.TeleBot(token=telegram_token)
 
 
 speakers = {'LEONID' : 'kingsson.wav', 'NOF' : 'Nof.wav', 'SASHA' : 'sasha.wav'}
-speaker = speakers['LEONID']
+speaker = speakers['SASHA']
 with open('tts_model.pkl','rb' ) as file:
     tts = pickle.load(file)
 
