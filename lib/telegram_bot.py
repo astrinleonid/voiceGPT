@@ -1,18 +1,18 @@
-# from flask import Flask
-# from flask import request
-# from flask import send_file
-# from flask import render_template
+
 import pickle
 import openai
 import json
-#import asyncio
-# import requests
-# from flask import Response
-# from telegram import Update, Bot
-# from telegram.ext import Updater, CommandHandler, MessageHandler, filters
+import requests
 import telebot
+from azureSDK import synthesize_with_azure
 from telebot import types
-#last revision
+import ffmpeg
+import whisper
+from pydub import AudioSegment
+
+
+
+voice_transcription_model = whisper.load_model("large")
 
 with open('config.json') as token_file:
     tokens = json.load(token_file)
@@ -22,29 +22,28 @@ telegram_token  = tokens['telegram']
 COQUI_STUDIO_TOKEN = tokens['coqui']
 URL = tokens['url']
 port = tokens['port']
+speech_key = tokens['azure']
+service_region = tokens['region']
 
 bot = telebot.TeleBot(token=telegram_token)
 
-# async def set_telegram_webhook(bot, url):
-#     await bot.set_webhook(url=url)
-#
-# asyncio.run(set_telegram_webhook(bot, f'http://{URL}:{port}/{telegram_token}'))
+speakers = {'LEONID' : 'kingsson.wav',
+            'NOF' : 'Nof.wav',
+            'SASHA' : 'sasha.wav',
+            'Aria': "en-US-AriaNeural",
+            'Christopher': "en-US-ChristopherNeural"}
 
-
-speakers = {'LEONID' : 'kingsson.wav', 'NOF' : 'Nof.wav', 'SASHA' : 'sasha.wav'}
-speaker = speakers['SASHA']
+speaker = 'SASHA'
 with open('tts_model.pkl','rb' ) as file:
     tts = pickle.load(file)
-
+synthesizer = 'AZURE'
 
 def return_voice_response(prompt, speaker):
 
     result = openai.ChatCompletion.create(
       model="gpt-3.5-turbo",
       messages=[
-            {"role": "system", "content": "You are a girlfriend who is not feeling well."},
             {"role": "user", "content": prompt}
-
         ]
     )
 
@@ -52,66 +51,70 @@ def return_voice_response(prompt, speaker):
     print(x)
     # synthesis
     file_path = 'response.wav'
-    tts.tts_to_file(text=x, speaker_wav=speaker, language=tts.languages[0], file_path=file_path)
-    # return tts.tts(text=x, speaker_wav=speaker, language=tts.languages[0])
+    if synthesizer == 'COQUI':
+        tts.tts_to_file(text=x, speaker_wav=speakers[speaker], language=tts.languages[0], file_path=file_path)
+    elif synthesizer == 'AZURE':
+        synthesize_with_azure(x, file_path, speech_key, service_region)
     return file_path
 
 
-# app = Flask(__name__)
-#
-# @app.route('/')
-# def index():
-#     return render_template('index.html')
-#
-#
-# @app.route("/get_response")
-# def get_response():
-#     print("Incoming request")
-#     prompt = (request.args.get("prompt"))
-#     speaker = speakers[request.args.get("speaker")]
-#     output_file = return_voice_response(prompt, speaker)
-#     headers = {"Content-Disposition": f"attachment; filename=response.wav"}
-#     return send_file(output_file, mimetype='audio/wav', as_attachment=True)
-
-
-# updater = Updater(telegram_token, use_context=True)
-# dispatcher = updater.dispatcher
-
-# def handle_text(update, context):
-#     # You can replace this part with your own logic to generate a response
-#     response_text = f'You said: {update.message.text}'
-#     context.bot.send_message(chat_id=update.message.chat_id, text=response_text)
-#
-# text_handler = MessageHandler(filters.text, handle_text)
-# dispatcher.add_handler(text_handler)
-#
-# @app.route(f'/{telegram_token}', methods=['POST'])
-# def handle_telegram_update():
-#     update = Update.de_json(request.get_json(force=True), updater.bot)
-#     dispatcher.process_update(update)
-#     return 'ok'
 
 @bot.message_handler(commands=['start'])
 def start(message):
   bot.send_message(message.chat.id, '<b>Im Mac</b>', parse_mode = 'html')
 
 @bot.message_handler(commands=['speaker'])
-def start(message):
+def get_speaker(message):
+  all_speakers = "\n" + "\n".join([name for name in speakers])
   bot.send_message(message.chat.id, f'Current speaker: {speaker}', parse_mode = 'html')
-  markup = types.KeyboardButtonPollType
+  bot.send_message(message.chat.id, f'Available speakers: {all_speakers}', parse_mode='html')
+  sent = bot.reply_to(message, f'To change speaker, reply with speaker name', parse_mode='html')
+  bot.register_next_step_handler(sent, change_speaker)
+
+  # markup = types.KeyboardButtonPollType
+
+def change_speaker(message):
+    global speaker
+    name = message.text
+    if name in [x for x in speakers]:
+        print(name)
+        speaker = name
+    bot.send_message(message.chat.id, f'Current speaker: {speaker}', parse_mode='html')
 
 @bot.message_handler(content_types=['text'])
 def get_user_text(message):
     print("Incoming request")
 
-    # speaker = speakers[request.args.get("speaker")]
-    speaker = speakers['LEONID']
-    print(message, speaker)
+    print(message.text, speaker)
     output_file = return_voice_response(message.text, speaker)
     # bot.send_message(message.chat.id, 'Audio follows', parse_mode = 'html')
     audio = open(output_file, 'rb')
     bot.send_audio(message.chat.id, audio)
 
+@bot.message_handler(content_types=['voice'])
+def get_user_voice(message):
+    file_id = message.voice.file_id
+    file_name = f'voice_{file_id}.ogg'
+    # Download the voice message file
+    download_voice_file(file_id, file_name)
+    print('File saved')
+    result = voice_transcription_model.transcribe('voice_prompt.wav')
+    prompt = " ".join([segment['text'] for segment in result['segments']])
+    print(prompt, speaker)
+    output_file = return_voice_response(prompt, speaker)
+    # bot.send_message(message.chat.id, 'Audio follows', parse_mode = 'html')
+    audio = open(output_file, 'rb')
+    bot.send_audio(message.chat.id, audio)
+
+def download_voice_file(file_id, file_name):
+    file_path = bot.get_file(file_id).file_path
+    file_url = f'https://api.telegram.org/file/bot{telegram_token}/{file_path}'
+    response = requests.get(file_url)
+    # print(response)
+    with open(file_name, 'wb') as f:
+        f.write(response.content)
+    audio = AudioSegment.from_file(file_name)
+    audio.export('voice_prompt.wav', format='wav')
 
 if __name__ == '__main__':
     # app.run(host='0.0.0.0', port=port)
