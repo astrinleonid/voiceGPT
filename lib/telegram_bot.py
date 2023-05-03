@@ -23,6 +23,8 @@ COQUI_STUDIO_TOKEN = tokens['coqui']
 URL = tokens['url']
 port = tokens['port']
 azure_credentials = (tokens['azure'], tokens['region'])
+model = tokens['gpt_model']
+available_models = {}
 
 bot = telebot.TeleBot(token=telegram_token)
 file_path = 'response.wav'
@@ -35,6 +37,8 @@ synth.add_voice(Voice('Leonid', 'coqui', 'kingsson.wav'))
 synth.add_voice(Voice('Nof', 'coqui', 'Nof.wav'))
 synth.add_voice(Voice('Sasha', 'coqui', 'sasha.wav'))
 synth.add_voice(Voice('Christopher', 'azure', "en-US-ChristopherNeural"))
+synth.add_voice(Voice('Jenny', 'azure', "en-US-JennyNeural"))
+synth.add_voice(Voice('Aria', 'azure', "en-US-AriaNeural"))
 
 mode = 'chatgpt'
 
@@ -42,7 +46,7 @@ def return_voice_response(prompt, mode):
 
     if mode == 'chatgpt':
         result = openai.ChatCompletion.create(
-          model="gpt-3.5-turbo",
+          model=model,
           messages=[
                 {"role": "user", "content": prompt}
             ]
@@ -61,7 +65,16 @@ def return_voice_response(prompt, mode):
 
 @bot.message_handler(commands=['start'])
 def start(message):
-  bot.send_message(message.chat.id, '<b>Im Mac</b>', parse_mode = 'html')
+  greeting = """
+        <b>Welcome to the chatGPT chatbot</b>
+        Chatbot has two modes. 
+        <b>Chatgpt mode:</b> any text or voice input is treated as a prompt for chatgpt. The response received from chatGPT API is vocalized and returned as the sound file
+        <b>Parrot mode:</b> the input itself is converted to speech and returned as a sound file
+        To change mode: /mode
+        To change speaker: /speaker
+        To change chatGPT model: /model 
+  """
+  bot.send_message(message.chat.id, greeting, parse_mode = 'html')
 
 @bot.message_handler(commands=['speaker'])
 def get_speaker(message):
@@ -71,7 +84,7 @@ def get_speaker(message):
       all_speakers += f"{i+1} {voice.name} {voice.model}\n"
   bot.send_message(message.chat.id, f'Current speaker: {synth.get_voice_name()}', parse_mode = 'html')
   bot.send_message(message.chat.id, f'Available speakers: {all_speakers}', parse_mode='html')
-  sent = bot.reply_to(message, f'To change speaker, reply with speaker number', parse_mode='html')
+  sent = bot.reply_to(message, f'To change speaker, reply with speaker number, else reply with 0', parse_mode='html')
   bot.register_next_step_handler(sent, change_speaker)
 
   # markup = types.KeyboardButtonPollType
@@ -83,6 +96,22 @@ def change_mode(message):
   sent = bot.reply_to(message, f'Enter mode, chatgpt or parrot', parse_mode='html')
   bot.register_next_step_handler(sent, change_mode)
 
+
+@bot.message_handler(commands=['model'])
+def change_model(message):
+    global available_models
+    print("List models")
+    bot.send_message(message.chat.id, f'Current model: {model}', parse_mode='html')
+    models = openai.Model.list()
+    all_models = '\n'
+    for i, model_name in enumerate(models.data):
+      if model_name.id[:3] == 'gpt':
+        all_models += f"{i + 1} {model_name.id}\n"
+        available_models[i+1] = model_name.id
+    bot.send_message(message.chat.id, f'Available models: {all_models}', parse_mode='html')
+    sent = bot.reply_to(message, f'To change model, reply with model number, else reply with 0', parse_mode='html')
+    bot.register_next_step_handler(sent, change_model)
+
 def change_mode(message):
     global mode
     input = message.text
@@ -90,13 +119,27 @@ def change_mode(message):
         mode = input
     bot.send_message(message.chat.id, f'Current mode: {mode}', parse_mode='html')
 def change_speaker(message):
-
-    num = int(message.text)
-    if num in range(synth.num_voices + 1):
-        synth.set_voice(num)
-        print(synth.get_voice_name())
-
+    try:
+        num = int(message.text)
+        if num in range(synth.num_voices + 1):
+            if num > 0:
+                synth.set_voice(num)
+                print(synth.get_voice_name())
+    except:
+        pass
     bot.send_message(message.chat.id, f'Current speaker: {synth.get_voice_name()}', parse_mode='html')
+
+def change_model(message):
+    global model
+    try:
+        num = int(message.text)
+        if num in available_models:
+            model = available_models[num]
+            print(model)
+    except:
+        pass
+    bot.send_message(message.chat.id, f'Current model: {model}', parse_mode='html')
+
 
 @bot.message_handler(content_types=['text'])
 def get_user_text(message):
