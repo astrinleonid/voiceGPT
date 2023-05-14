@@ -69,7 +69,7 @@ def start(message):
         <b>Welcome to the chatGPT chatbot</b>
         
         Chatbot has two modes. 
-        <b>Chatgpt mode:</b> any text or voice input is treated as a prompt for chatgpt. The response received from chatGPT API is vocalized and returned as the sound file
+        <b>ChatGPT mode:</b> any text or voice input is treated as a prompt for chatGPT. The response received from chatGPT API is vocalized and returned as the sound file
         <b>Parrot mode:</b> the input itself is converted to speech and returned as a sound file
         
         To change mode: /mode
