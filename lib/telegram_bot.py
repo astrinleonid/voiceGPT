@@ -10,7 +10,7 @@ import pathlib
 
 
 from telebot import types
-import ffmpeg
+
 import whisper
 from pydub import AudioSegment
 from voice_generator import Voice, Synthesizer
