@@ -8,7 +8,7 @@ import os
 import platform
 import pathlib
 
-
+#
 from telebot import types
 
 import whisper
