@@ -4,6 +4,7 @@ import openai
 import json
 import requests
 import telebot
+import os
 
 from telebot import types
 import ffmpeg
@@ -74,7 +75,8 @@ def start(message):
         
         To change mode: /mode
         To change speaker: /speaker
-        To change chatGPT model: /model 
+        To change chatGPT model: /model
+        To add speaker: /new_speaker 
   """
   bot.send_message(message.chat.id, greeting, parse_mode = 'html')
 
@@ -89,6 +91,22 @@ def get_speaker(message):
   sent = bot.reply_to(message, f'To change speaker, reply with speaker number, else reply with 0', parse_mode='html')
   bot.register_next_step_handler(sent, change_speaker)
 
+@bot.message_handler(commands=['new_speaker'])
+def new_speaker(message):
+      print("Add new speaker")
+      all_speakers = "\n"
+      for i, voice in enumerate(synth.voices):
+          all_speakers += f"{i + 1} {voice.name} {voice.model}\n"
+      bot.send_message(message.chat.id, f'Current speaker: {synth.get_voice_name()}', parse_mode='html')
+      bot.send_message(message.chat.id, f'Available speakers: {all_speakers}', parse_mode='html')
+      sent = bot.reply_to(message, f"""
+                                    To add your voice to the list of the speakers, send a voice message with the next phrase: 
+                                    <b> Once upon a time, the King's youngest son 
+                                    became filled with the desire to go abroad, and see the world. </b> 
+                                    else reply with 0""",
+                          parse_mode='html')
+      bot.register_next_step_handler(sent, new_speaker)
+
   # markup = types.KeyboardButtonPollType
 
 @bot.message_handler(commands=['mode'])
@@ -97,6 +115,7 @@ def change_mode(message):
   bot.send_message(message.chat.id, f'Current mode: {mode}', parse_mode='html')
   sent = bot.reply_to(message, f'Enter mode, chatgpt or parrot', parse_mode='html')
   bot.register_next_step_handler(sent, change_mode)
+  print("Mode changed")
 
 
 @bot.message_handler(commands=['model'])
@@ -120,6 +139,8 @@ def change_mode(message):
     if input in ['chatgpt', 'parrot']:
         mode = input
     bot.send_message(message.chat.id, f'Current mode: {mode}', parse_mode='html')
+
+
 def change_speaker(message):
     try:
         num = int(message.text)
@@ -130,6 +151,41 @@ def change_speaker(message):
     except:
         pass
     bot.send_message(message.chat.id, f'Current speaker: {synth.get_voice_name()}', parse_mode='html')
+
+
+def new_speaker(message):
+    print(message.content_type)
+    if message.content_type == 'voice':
+        print("Voice sample received")
+        file_id = message.voice.file_id
+        file_name = f'voice_{file_id}.ogg'
+        # Download the voice message file
+        download_voice_file(file_id, file_name, 'voice_sample.wav')
+        print('File saved')
+        sent = bot.send_message(message.chat.id, f"Please enter the name of the speaker or enter 'quit' to abandon", parse_mode='html')
+        bot.register_next_step_handler(sent, add_speaker_to_the_list)
+    else:
+        bot.send_message(message.chat.id, f'Current speaker: {synth.get_voice_name()}', parse_mode='html')
+
+def add_speaker_to_the_list(message):
+
+    speaker_name = message.text
+    if speaker_name == 'quit':
+        # delete voice sample
+        return
+    if len(speaker_name.split()) == 1 and speaker_name.isalnum():
+        # rename voice sample
+        sample_file_name = speaker_name.lower() + '.wav'
+        os.rename('voice_sample.wav', sample_file_name)
+        synth.add_voice(Voice(speaker_name, 'coqui', sample_file_name))
+        sent = bot.send_message(message.chat.id, f"Speaker added",
+                            parse_mode='html')
+    else:
+        sent = bot.send_message(message.chat.id, f"The name is not valid, should be one word, use alphanumeric symbols only",
+                            parse_mode='html')
+        sent = bot.send_message(message.chat.id, f"Please enter the name of the speaker or enter 'quit' to abandon",
+                            parse_mode='html')
+        bot.register_next_step_handler(sent, add_speaker_to_the_list)
 
 def change_model(message):
     global model
@@ -169,7 +225,7 @@ def get_user_voice(message):
     audio = open(output_file, 'rb')
     bot.send_audio(message.chat.id, audio)
 
-def download_voice_file(file_id, file_name):
+def download_voice_file(file_id, file_name, output_file = 'voice_prompt.wav'):
     file_path = bot.get_file(file_id).file_path
     file_url = f'https://api.telegram.org/file/bot{telegram_token}/{file_path}'
     response = requests.get(file_url)
@@ -177,7 +233,7 @@ def download_voice_file(file_id, file_name):
     with open(file_name, 'wb') as f:
         f.write(response.content)
     audio = AudioSegment.from_file(file_name)
-    audio.export('voice_prompt.wav', format='wav')
+    audio.export(output_file, format='wav')
 
 if __name__ == '__main__':
     # app.run(host='0.0.0.0', port=port)
