@@ -15,6 +15,26 @@ import whisper
 from pydub import AudioSegment
 from voice_generator import Voice, Synthesizer
 
+class ChatApp:
+    def __init__(self):
+        # Setting the API key to use the OpenAI API
+        openai.api_key = os.getenv("OPENAI_API_KEY")
+        self.messages = [
+            {"role": "system", "content": "You are a coding tutor bot to help user write and optimize python code."},
+        ]
+
+    def chat(self, message):
+        self.messages.append({"role": "user", "content": message})
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=self.messages
+        )
+        self.messages.append({"role": "assistant", "content": response["choices"][0]["message"].content})
+        return response["choices"][0]["message"]
+
+
+
+
 current_os = platform.system()
 print("Current OS: ", current_os)
 if current_os == "Windows":
@@ -27,7 +47,7 @@ voice_transcription_model = whisper.load_model("small")
 with open('config.json') as token_file:
     tokens = json.load(token_file)
 
-openai.api_key = tokens['openai']
+openai_api_key = tokens['openai']
 telegram_token  = tokens['telegram']
 COQUI_STUDIO_TOKEN = tokens['coqui']
 URL = tokens['url']
@@ -35,6 +55,28 @@ port = tokens['port']
 azure_credentials = (tokens['azure'], tokens['region'])
 model = tokens['gpt_model']
 available_models = {}
+
+
+class ChatApp:
+    def __init__(self, openai_api_key):
+        # Setting the API key to use the OpenAI API
+        openai.api_key = openai_api_key
+        self.messages = [ ]
+
+    def chat(self, message):
+        self.messages.append({"role": "user", "content": message})
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=self.messages
+        )
+        self.messages.append({"role": "assistant", "content": response["choices"][0]["message"].content})
+        return response["choices"][0]["message"]
+
+    def new_chat(self):
+        self.messages = []
+
+
+chatGPT = ChatApp(openai_api_key)
 
 bot = telebot.TeleBot(token=telegram_token)
 file_path = 'response.wav'
@@ -56,13 +98,16 @@ def return_voice_response(prompt, mode):
 
     if mode == 'chatgpt':
         try:
-            result = openai.ChatCompletion.create(
-                model=model,
-                messages=[
-                    {"role": "user", "content": prompt}
-                    ]
-                )
-            x = result['choices'][0]['message']['content']
+
+            # result = openai.ChatCompletion.create(
+            #     model=model,
+            #     messages=[
+            #         {"role": "user", "content": prompt}
+            #         ]
+            #     )
+            # x = result['choices'][0]['message']['content']
+            x = chatGPT.chat(prompt)
+
         except Exception as er:
             print(f"invalid responce from openAi API, error {er} ")
             x = "invalid responce from openAi API"
@@ -75,7 +120,9 @@ def return_voice_response(prompt, mode):
     synth.generate(x)
     return synth.file_path
 
-
+@bot.message_handler(commands=['new_chat'])
+def new_chat(message):
+    chatGPT.new_chat()
 
 @bot.message_handler(commands=['start'])
 def start(message):
