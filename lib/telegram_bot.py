@@ -126,7 +126,7 @@ def new_speaker(message):
 def change_mode(message):
   print("Change mode")
   bot.send_message(message.chat.id, f'Current mode: {mode}', parse_mode='html')
-  sent = bot.reply_to(message, f'Enter mode, chatgpt or parrot', parse_mode='html')
+  sent = bot.reply_to(message, f'Enter mode, chatgpt, speech_to_text or parrot', parse_mode='html')
   bot.register_next_step_handler(sent, change_mode)
   print("Mode changed")
 
@@ -149,7 +149,7 @@ def change_model(message):
 def change_mode(message):
     global mode
     input = message.text
-    if input in ['chatgpt', 'parrot']:
+    if input in ['chatgpt', 'parrot', 'speech_to_text']:
         mode = input
     bot.send_message(message.chat.id, f'Current mode: {mode}', parse_mode='html')
 
@@ -233,10 +233,13 @@ def get_user_voice(message):
     result = voice_transcription_model.transcribe('voice_prompt.wav')
     prompt = " ".join([segment['text'] for segment in result['segments']])
     print(prompt)
-    output_file = return_voice_response(prompt, mode)
-    # bot.send_message(message.chat.id, 'Audio follows', parse_mode = 'html')
-    audio = open(output_file, 'rb')
-    bot.send_audio(message.chat.id, audio)
+    if mode == "speech_to_text":
+        bot.send_message(message.chat.id, prompt, parse_mode='html')
+    else:
+        output_file = return_voice_response(prompt, mode)
+        # bot.send_message(message.chat.id, 'Audio follows', parse_mode = 'html')
+        audio = open(output_file, 'rb')
+        bot.send_audio(message.chat.id, audio)
 
 def download_voice_file(file_id, file_name, output_file = 'voice_prompt.wav'):
     file_path = bot.get_file(file_id).file_path
