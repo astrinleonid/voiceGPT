@@ -70,7 +70,7 @@ class ChatApp:
             messages=self.messages
         )
         self.messages.append({"role": "assistant", "content": response["choices"][0]["message"].content})
-        return response["choices"][0]["message"]
+        return response["choices"][0]["message"]["content"]
 
     def new_chat(self):
         self.messages = []
