@@ -22,7 +22,7 @@ if current_os == "Windows":
     pathlib.PosixPath = pathlib.WindowsPath
 
 
-voice_transcription_model = whisper.load_model("large")
+voice_transcription_model = whisper.load_model("small")
 
 with open('config.json') as token_file:
     tokens = json.load(token_file)
