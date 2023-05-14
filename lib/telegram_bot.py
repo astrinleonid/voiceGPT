@@ -5,12 +5,21 @@ import json
 import requests
 import telebot
 import os
+import platform
+import pathlib
+
 
 from telebot import types
 import ffmpeg
 import whisper
 from pydub import AudioSegment
 from voice_generator import Voice, Synthesizer
+
+os = platform.system()
+print("Current OS: ", os)
+if os == "Windows":
+    temp = pathlib.PosixPath
+    pathlib.PosixPath = pathlib.WindowsPath
 
 
 voice_transcription_model = whisper.load_model("large")
