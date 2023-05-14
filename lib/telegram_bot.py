@@ -74,7 +74,7 @@ class ChatApp:
 
     def new_chat(self):
         self.messages = [self.messages]
-        print(f"Chat reset, messages {}")
+        print(f"Chat reset, messages {self.messages}")
 
 
 chatGPT = ChatApp(openai_api_key)
@@ -131,9 +131,10 @@ def start(message):
   greeting = """
         <b>Welcome to the chatGPT chatbot</b>
         
-        Chatbot has two modes. 
+        Chatbot has three modes. 
         <b>ChatGPT mode:</b> any text or voice input is treated as a prompt for chatGPT. The response received from chatGPT API is vocalized and returned as the sound file
         <b>Parrot mode:</b> the input itself is converted to speech and returned as a sound file
+        <b>Speech to text mode:</b> the voice input is converted to text
         
         To change mode: /mode
         To change speaker: /speaker
