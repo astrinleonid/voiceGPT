@@ -15,9 +15,9 @@ import whisper
 from pydub import AudioSegment
 from voice_generator import Voice, Synthesizer
 
-os = platform.system()
-print("Current OS: ", os)
-if os == "Windows":
+current_os = platform.system()
+print("Current OS: ", current_os)
+if current_os == "Windows":
     temp = pathlib.PosixPath
     pathlib.PosixPath = pathlib.WindowsPath
 
@@ -55,13 +55,17 @@ mode = 'chatgpt'
 def return_voice_response(prompt, mode):
 
     if mode == 'chatgpt':
-        result = openai.ChatCompletion.create(
-          model=model,
-          messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
-        x = result['choices'][0]['message']['content']
+        try:
+            result = openai.ChatCompletion.create(
+                model=model,
+                messages=[
+                    {"role": "user", "content": prompt}
+                    ]
+                )
+            x = result['choices'][0]['message']['content']
+        except Exception as er:
+            print(f"invalid responce from openAi API, error {er} ")
+            x = "invalid responce from openAi API"
 
     else:
         x = prompt
