@@ -73,7 +73,8 @@ class ChatApp:
         return response["choices"][0]["message"]["content"]
 
     def new_chat(self):
-        self.messages = []
+        self.messages = [self.messages]
+        print(f"Chat reset, messages {}")
 
 
 chatGPT = ChatApp(openai_api_key)
@@ -123,6 +124,7 @@ def return_voice_response(prompt, mode):
 @bot.message_handler(commands=['new_chat'])
 def new_chat(message):
     chatGPT.new_chat()
+    bot.send_message(message.chat.id, "Start a new conversation", parse_mode='html')
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -137,6 +139,7 @@ def start(message):
         To change speaker: /speaker
         To change chatGPT model: /model
         To add speaker: /new_speaker 
+        To start a new conversation with chatGPT: /new_chat
   """
   bot.send_message(message.chat.id, greeting, parse_mode = 'html')
 
