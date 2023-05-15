@@ -7,6 +7,7 @@ import telebot
 import os
 import platform
 import pathlib
+import time
 
 #
 from telebot import types
@@ -14,25 +15,6 @@ from telebot import types
 import whisper
 from pydub import AudioSegment
 from voice_generator import Voice, Synthesizer
-
-class ChatApp:
-    def __init__(self):
-        # Setting the API key to use the OpenAI API
-        openai.api_key = os.getenv("OPENAI_API_KEY")
-        self.messages = [
-            {"role": "system", "content": "You are a coding tutor bot to help user write and optimize python code."},
-        ]
-
-    def chat(self, message):
-        self.messages.append({"role": "user", "content": message})
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=self.messages
-        )
-        self.messages.append({"role": "assistant", "content": response["choices"][0]["message"].content})
-        return response["choices"][0]["message"]
-
-
 
 
 current_os = platform.system()
@@ -80,6 +62,30 @@ class ChatApp:
 chatGPT = ChatApp(openai_api_key)
 
 bot = telebot.TeleBot(token=telegram_token)
+
+# BOT_INTERVAL = 3
+# BOT_TIMEOUT = 30
+# bot = None
+# def bot_polling(token=telegram_token):
+#
+#     global bot #Keep the bot object as global variable if needed
+#     print("Starting bot polling now")
+#     while True:
+#         try:
+#             print("New bot instance started")
+#             bot = telebot.TeleBot(token) #Generate new bot instance
+#             # botactions(bot) #If bot is used as a global variable, remove bot as an input param
+#             bot.polling(none_stop=True, interval=BOT_INTERVAL, timeout=BOT_TIMEOUT)
+#         except Exception as ex: #Error in polling
+#             print("Bot polling failed, restarting in {}sec. Error:\n{}".format(BOT_TIMEOUT, ex))
+#             bot.stop_polling()
+#             time.sleep(BOT_TIMEOUT)
+#         else: #Clean exit
+#             bot.stop_polling()
+#             print("Bot polling loop finished")
+#             break #End loop
+
+
 file_path = 'response.wav'
 
 with open('tts_model.pkl','rb' ) as file:
@@ -96,8 +102,29 @@ synth.add_voice(Voice('Aria', 'azure', "en-US-AriaNeural"))
 mode = 'chatgpt'
 
 def return_voice_response(prompt, mode):
+    x = []
 
-    if mode == 'chatgpt':
+    if prompt[0] == "%":
+        print("String is formatted, changing mode to parrot")
+        mode = 'parrot'
+        part = []
+
+        words = prompt.strip('%').split()
+        num_words = len(words)
+        words = iter(words)
+        for i in range(num_words):
+            word = next(words)
+            if word[0] == "%":
+                #insert pause
+                if len(part) > 0:
+                    x.append(" ".join(part))
+                    part = []
+                    print(f"part reset, len(part) {len(part)}")
+                x.append(word)
+            else:
+                part.append(word)
+        x.append(" ".join(part))
+    elif mode == 'chatgpt':
         try:
 
             # result = openai.ChatCompletion.create(
@@ -107,16 +134,18 @@ def return_voice_response(prompt, mode):
             #         ]
             #     )
             # x = result['choices'][0]['message']['content']
-            x = chatGPT.chat(prompt)
+            x.append(chatGPT.chat(prompt))
 
         except Exception as er:
             print(f"invalid responce from openAi API, error {er} ")
-            x = "invalid responce from openAi API"
+            x.append("invalid response from openAi API")
 
     else:
-        x = prompt
+        x.append(prompt)
 
-    print(x)
+
+    print(" ".join(x))
+
     # synthesis
     synth.generate(x)
     return synth.file_path
@@ -177,7 +206,7 @@ def new_speaker(message):
 def change_mode(message):
   print("Change mode")
   bot.send_message(message.chat.id, f'Current mode: {mode}', parse_mode='html')
-  sent = bot.reply_to(message, f'Enter mode, chatgpt, speech_to_text or parrot', parse_mode='html')
+  sent = bot.reply_to(message, f'Modes available:<b>\n1  chatgpt\n2  speech_to_text\n3  parrot</b>\nTo change mode send mode number, or send 0 to pass', parse_mode='html')
   bot.register_next_step_handler(sent, change_mode)
   print("Mode changed")
 
@@ -200,8 +229,13 @@ def change_model(message):
 def change_mode(message):
     global mode
     input = message.text
-    if input in ['chatgpt', 'parrot', 'speech_to_text']:
-        mode = input
+    modes = ['chatgpt', 'speech_to_text', 'parrot']
+    try:
+        num = int(input) - 1
+        if num in range(3):
+            mode = modes[num]
+    except:
+        pass
     bot.send_message(message.chat.id, f'Current mode: {mode}', parse_mode='html')
 
 
@@ -302,9 +336,20 @@ def download_voice_file(file_id, file_name, output_file = 'voice_prompt.wav'):
     audio = AudioSegment.from_file(file_name)
     audio.export(output_file, format='wav')
 
+
+
+
 if __name__ == '__main__':
+    # polling_thread = threading.Thread(target=bot_polling)
+    # polling_thread.daemon = True
+    # polling_thread.start()
     # app.run(host='0.0.0.0', port=port)
-    bot.polling(none_stop=True)
+    bot.polling()
+    # while True:
+    #     try:
+    #         time.sleep(120)
+    #     except KeyboardInterrupt:
+    #         break
 
 
 
