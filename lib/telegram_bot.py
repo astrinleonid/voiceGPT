@@ -7,6 +7,7 @@ import telebot
 import os
 import platform
 import pathlib
+import time
 
 #
 from telebot import types
@@ -14,25 +15,6 @@ from telebot import types
 import whisper
 from pydub import AudioSegment
 from voice_generator import Voice, Synthesizer
-
-class ChatApp:
-    def __init__(self):
-        # Setting the API key to use the OpenAI API
-        openai.api_key = os.getenv("OPENAI_API_KEY")
-        self.messages = [
-            {"role": "system", "content": "You are a coding tutor bot to help user write and optimize python code."},
-        ]
-
-    def chat(self, message):
-        self.messages.append({"role": "user", "content": message})
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=self.messages
-        )
-        self.messages.append({"role": "assistant", "content": response["choices"][0]["message"].content})
-        return response["choices"][0]["message"]
-
-
 
 
 current_os = platform.system()
@@ -79,7 +61,31 @@ class ChatApp:
 
 chatGPT = ChatApp(openai_api_key)
 
-bot = telebot.TeleBot(token=telegram_token)
+# bot = telebot.TeleBot(token=telegram_token)
+
+BOT_INTERVAL = 3
+BOT_TIMEOUT = 30
+bot = None
+def bot_polling(token=telegram_token):
+
+    global bot #Keep the bot object as global variable if needed
+    print("Starting bot polling now")
+    while True:
+        try:
+            print("New bot instance started")
+            bot = telebot.TeleBot(token) #Generate new bot instance
+            # botactions(bot) #If bot is used as a global variable, remove bot as an input param
+            bot.polling(none_stop=True, interval=BOT_INTERVAL, timeout=BOT_TIMEOUT)
+        except Exception as ex: #Error in polling
+            print("Bot polling failed, restarting in {}sec. Error:\n{}".format(BOT_TIMEOUT, ex))
+            bot.stop_polling()
+            time.sleep(BOT_TIMEOUT)
+        else: #Clean exit
+            bot.stop_polling()
+            print("Bot polling loop finished")
+            break #End loop
+
+
 file_path = 'response.wav'
 
 with open('tts_model.pkl','rb' ) as file:
@@ -302,9 +308,20 @@ def download_voice_file(file_id, file_name, output_file = 'voice_prompt.wav'):
     audio = AudioSegment.from_file(file_name)
     audio.export(output_file, format='wav')
 
+
+
+
 if __name__ == '__main__':
+    # polling_thread = threading.Thread(target=bot_polling)
+    # polling_thread.daemon = True
+    # polling_thread.start()
     # app.run(host='0.0.0.0', port=port)
-    bot.polling(none_stop=True)
+    bot_polling()
+    # while True:
+    #     try:
+    #         time.sleep(120)
+    #     except KeyboardInterrupt:
+    #         break
 
 
 
