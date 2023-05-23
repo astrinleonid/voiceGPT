@@ -86,7 +86,7 @@ bot = telebot.TeleBot(token=telegram_token)
 #             break #End loop
 
 
-file_path = 'response.wav'
+file_path = 'response'
 
 with open('tts_model.pkl','rb' ) as file:
     tts = pickle.load(file)
@@ -148,7 +148,7 @@ def return_voice_response(prompt, mode):
 
     # synthesis
     synth.generate(x)
-    return synth.file_path
+    return synth.get_file_path()
 
 @bot.message_handler(commands=['new_chat'])
 def new_chat(message):

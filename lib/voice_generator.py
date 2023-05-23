@@ -1,5 +1,6 @@
 from azureSDK import synthesize_with_azure
 from pydub import AudioSegment
+from datetime import datetime
 
 class Voice:
     def __init__(self, name, model = 'coqui', path = ''):
@@ -20,6 +21,10 @@ class Synthesizer:
         self.file_path = file_path
         self.partial_files = []
 
+    def get_file_path(self):
+        now = datetime.now()
+        dt_string = now.strftime("%d%m%Y%H%M%S")
+        return self.file_path + dt_string + '.wav'
 
     def add_voice(self, voice):
         self.voices.append(voice)
@@ -85,4 +90,4 @@ class Synthesizer:
         for infile in self.partial_files:
             response += AudioSegment.from_wav(infile)
 
-        response.export(self.file_path, format="wav")
+        response.export(self.get_file_path(), format="wav")
