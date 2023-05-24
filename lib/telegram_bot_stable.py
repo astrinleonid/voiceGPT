@@ -7,6 +7,7 @@ import os
 import platform
 import pathlib
 import time
+from datetime import datetime
 
 from TTS.api import TTS
 
@@ -62,8 +63,13 @@ chatGPT = ChatApp(openai_api_key)
 BOT_INTERVAL = 3
 BOT_TIMEOUT = 5
 
+now = datetime.now()
+dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+error_message = f"Bot started at {dt_string}"
+
 def bot_polling(token=telegram_token):
 
+     global error_message
      bot = None
      print("Starting bot polling now")
      while True:
@@ -74,6 +80,9 @@ def bot_polling(token=telegram_token):
              bot.polling(none_stop=True, interval=BOT_INTERVAL, timeout=BOT_TIMEOUT)
          except Exception as ex: #Error in polling
              print("Bot polling failed, restarting in {}sec. Error:\n{}".format(BOT_TIMEOUT, ex))
+             now = datetime.now()
+             dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+             error_message += f"\n\nCrash at {dt_string} Error message: {ex}"
              bot.stop_polling()
              time.sleep(BOT_TIMEOUT)
          else: #Clean exit
@@ -236,6 +245,10 @@ def botactions(bot):
         bot.send_message(message.chat.id, f'Crashing')
         int('kjwnkjn')
 
+    @bot.message_handler(commands=['log'])
+    def crash_log(message):
+
+        bot.send_message(message.chat.id, error_message)
 
 
     @bot.message_handler(content_types=['text'])
