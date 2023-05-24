@@ -52,7 +52,7 @@ class ChatApp:
         return response["choices"][0]["message"]["content"]
 
     def new_chat(self):
-        self.messages = [self.messages]
+        self.messages = []
         print(f"Chat reset, messages {self.messages}")
 
 
@@ -143,7 +143,7 @@ def return_voice_response(prompt, mode):
             x.append(chatGPT.chat(prompt))
 
         except Exception as er:
-            print(f"invalid responce from openAi API, error {er} ")
+            print(f"invalid response from openAi API, error {er} ")
             x.append("Sorry, I was busy with other requests and missed your question, can you please repeat it?")
 
     else:
