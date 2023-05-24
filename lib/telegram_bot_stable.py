@@ -8,6 +8,8 @@ import platform
 import pathlib
 import time
 
+from TTS.api import TTS
+
 import whisper
 from pydub import AudioSegment
 from voice_generator import Voice, Synthesizer
@@ -81,9 +83,9 @@ def bot_polling(token=telegram_token):
 
 
 file_path = 'response'
-
-with open('tts_model.pkl', 'rb') as file:
-    tts = pickle.load(file)
+tts = TTS(model_name='tts_models/multilingual/multi-dataset/your_tts', progress_bar=False, gpu=False)
+# with open('tts_model.pkl', 'rb') as file:
+#     tts = pickle.load(file)
 
 synth = Synthesizer(file_path, tts, azure_credentials)
 synth.add_voice(Voice('Leonid', 'coqui', 'kingsson.wav'))
