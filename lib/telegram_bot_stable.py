@@ -104,8 +104,8 @@ synth.add_voice(Voice('Christopher', 'azure', "en-US-ChristopherNeural"))
 synth.add_voice(Voice('Jenny', 'azure', "en-US-JennyNeural"))
 synth.add_voice(Voice('Aria', 'azure', "en-US-AriaNeural"))
 
-mode = 'chatgpt'
-
+default_mode = 'chatgpt'
+user_modes = {}
 
 def return_voice_response(prompt, mode):
     x = []
@@ -144,7 +144,7 @@ def return_voice_response(prompt, mode):
 
         except Exception as er:
             print(f"invalid responce from openAi API, error {er} ")
-            x.append("invalid response from openAi API")
+            x.append("Sorry, I was busy with other requests and missed your question, can you please repeat it?")
 
     else:
         x.append(prompt)
@@ -214,8 +214,12 @@ def botactions(bot):
     # markup = types.KeyboardButtonPollType
 
     @bot.message_handler(commands=['mode'])
-    def change_mode(message):
+    def get_mode(message):
+        global user_modes
         print("Change mode")
+
+        mode = get_user_mode(message.chat.id)
+
         bot.send_message(message.chat.id, f'Current mode: {mode}', parse_mode='html')
         sent = bot.reply_to(message,
                             f'Modes available:<b>\n1  chatgpt\n2  speech_to_text\n3  parrot</b>\nTo change mode send mode number, or send 0 to pass',
@@ -225,7 +229,7 @@ def botactions(bot):
 
 
     @bot.message_handler(commands=['model'])
-    def change_model(message):
+    def get_model(message):
         global available_models
         print("List models")
         bot.send_message(message.chat.id, f'Current model: {model}', parse_mode='html')
@@ -254,8 +258,10 @@ def botactions(bot):
     @bot.message_handler(content_types=['text'])
     def get_user_text(message):
         print("Incoming text")
-
         print(message.text)
+
+        mode = get_user_mode(message.chat.id)
+
         output_file = return_voice_response(message.text, mode)
         # bot.send_message(message.chat.id, 'Audio follows', parse_mode = 'html')
         audio = open(output_file, 'rb')
@@ -273,6 +279,9 @@ def botactions(bot):
        result = voice_transcription_model.transcribe('voice_prompt.wav')
        prompt = " ".join([segment['text'] for segment in result['segments']])
        print(prompt)
+
+       mode = get_user_mode(message.chat.id)
+
        if mode == "speech_to_text":
            bot.send_message(message.chat.id, prompt, parse_mode='html')
        else:
@@ -283,16 +292,16 @@ def botactions(bot):
 
 
     def change_mode(message):
-        global mode
+        global user_modes
         input = message.text
         modes = ['chatgpt', 'speech_to_text', 'parrot']
         try:
             num = int(input) - 1
             if num in range(3):
-                mode = modes[num]
+                user_modes[message.chat.id] = modes[num]
         except:
             pass
-        bot.send_message(message.chat.id, f'Current mode: {mode}', parse_mode='html')
+        bot.send_message(message.chat.id, f'Current mode: {user_modes[message.chat.id]}', parse_mode='html')
 
 
     def change_speaker(message):
@@ -367,6 +376,11 @@ def botactions(bot):
         audio = AudioSegment.from_file(file_name)
         audio.export(output_file, format='wav')
 
+    def get_user_mode(id):
+        global user_modes
+        if id not in user_modes:
+            user_modes[id] = default_mode
+        return user_modes[id]
 
 if __name__ == '__main__':
     # polling_thread = threading.Thread(target=bot_polling)
