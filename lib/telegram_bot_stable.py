@@ -274,9 +274,9 @@ def botactions(bot):
        file_id = message.voice.file_id
        file_name = f'voice_{file_id}.ogg'
        # Download the voice message file
-       download_voice_file(file_id, file_name)
+       prompt_file = download_voice_file(file_id, file_name)
        print('File saved')
-       result = voice_transcription_model.transcribe('voice_prompt.wav')
+       result = voice_transcription_model.transcribe(prompt_file)
        prompt = " ".join([segment['text'] for segment in result['segments']])
        print(prompt)
 
@@ -373,8 +373,9 @@ def botactions(bot):
         # print(response)
         with open(file_name, 'wb') as f:
             f.write(response.content)
-        audio = AudioSegment.from_file(file_name)
-        audio.export(output_file, format='wav')
+        return file_name
+        # audio = AudioSegment.from_file(file_name)
+        # audio.export(output_file, format='wav')
 
     def get_user_mode(id):
         global user_modes
