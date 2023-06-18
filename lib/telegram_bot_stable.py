@@ -369,13 +369,13 @@ def botactions(bot):
     def download_voice_file(file_id, file_name, output_file='voice_prompt.wav'):
         file_path = bot.get_file(file_id).file_path
         file_url = f'https://api.telegram.org/file/bot{telegram_token}/{file_path}'
+
         response = requests.get(file_url)
-        # print(response)
+
         with open(file_name, 'wb') as f:
             f.write(response.content)
         return file_name
-        # audio = AudioSegment.from_file(file_name)
-        # audio.export(output_file, format='wav')
+
 
     def get_user_mode(id):
         global user_modes
